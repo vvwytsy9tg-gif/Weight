@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>90-Day KPI Tracker</title>
+<style>
+  :root{
+    --bg: #171a1d;
+    --panel: #202428;
+    --panel-2: #262b30;
+    --line: #333a40;
+    --text: #ece8e1;
+    --text-dim: #9aa0a6;
+    --sage: #8fa998;
+    --sage-bright: #a9c4b3;
+    --amber: #c97b63;
+    --amber-bright: #e0937a;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num { font-family: "SF Mono", "Roboto Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 100px; }
+
+  header { padding: 6px 4px 18px; }
+  header .eyebrow {
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--sage); font-weight: 600; margin-bottom: 4px;
+  }
+  header h1 { font-size: 22px; margin: 0 0 4px; font-weight: 700; }
+  header p { margin: 0; color: var(--text-dim); font-size: 14px; }
+
+  .day-counter {
+    display:flex; align-items:baseline; gap:8px; margin-top:14px;
+  }
+  .day-counter .num { font-size: 34px; font-weight: 800; color: var(--sage-bright); }
+  .day-counter span.label { color: var(--text-dim); font-size: 13px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-dim); margin: 0 0 12px; font-weight: 700;
+  }
+
+  .hero-row { display:flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .hero-metric .num { font-size: 42px; font-weight: 800; line-height: 1; }
+  .hero-metric .unit { font-size: 15px; color: var(--text-dim); margin-left: 4px; }
+  .hero-metric .sub { font-size: 12.5px; color: var(--text-dim); margin-top: 6px; }
+
+  .trend-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  }
+  .trend-good { background: rgba(143,169,152,0.16); color: var(--sage-bright); }
+  .trend-watch { background: rgba(201,123,99,0.16); color: var(--amber-bright); }
+  .trend-flat { background: rgba(154,160,166,0.14); color: var(--text-dim); }
+
+  canvas { width: 100%; display:block; margin-top: 12px; }
+
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metric-box {
+    background: var(--panel-2); border-radius: 10px; padding: 12px;
+  }
+  .metric-box .num { font-size: 20px; font-weight: 700; }
+  .metric-box .lbl { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+
+  .entry-row { display:flex; gap: 10px; }
+  .field { flex: 1; }
+  label.f-label { display:block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 6px; }
+  input[type=number], input[type=date] {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 10px; color: var(--text); padding: 14px 12px; font-size: 16px;
+    font-family: inherit;
+  }
+  input:focus { outline: none; border-color: var(--sage); }
+
+  button {
+    -webkit-appearance: none; border: none; cursor: pointer;
+    font-family: inherit; font-weight: 700; font-size: 15px;
+  }
+  .btn-primary {
+    width: 100%; background: var(--sage); color: #14201a;
+    padding: 14px; border-radius: 10px; margin-top: 12px;
+  }
+  .btn-primary:active { background: var(--sage-bright); }
+  .btn-secondary {
+    background: transparent; color: var(--text-dim); border: 1px solid var(--line);
+    padding: 10px 14px; border-radius: 10px; font-size: 13px;
+  }
+
+  .tabs { display:flex; gap: 6px; margin-bottom: 14px; }
+  .tab {
+    flex: 1; text-align:center; padding: 11px 6px; border-radius: 10px;
+    background: var(--panel); color: var(--text-dim); font-size: 13.5px; font-weight: 700;
+    border: 1px solid var(--line);
+  }
+  .tab.active { background: var(--sage); color: #14201a; border-color: var(--sage); }
+
+  .log-list { max-height: 260px; overflow-y: auto; }
+  .log-row {
+    display:flex; justify-content: space-between; align-items:center;
+    padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px;
+  }
+  .log-row:last-child { border-bottom: none; }
+  .log-row .d { color: var(--text-dim); font-size: 12.5px; }
+  .log-row .delete { color: var(--amber); font-size: 12px; padding: 4px 8px; }
+
+  .empty { color: var(--text-dim); font-size: 13.5px; text-align:center; padding: 18px 0; }
+
+  .footer-actions { display:flex; gap: 8px; margin-top: 4px; }
+  .footer-actions button { flex:1; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--sage); color: #14201a; padding: 10px 18px; border-radius: 999px;
+    font-size: 13.5px; font-weight: 700; opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+  .rule-note { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Fat Loss System · KPI Tracker</div>
+    <h1>Weight &amp; Waist</h1>
+    <p>Two numbers. That's the whole system.</p>
+    <div class="day-counter">
+      <span class="num" id="dayCount">—</span>
+      <span class="label">of 90 days</span>
+    </div>
+  </header>
+
+  <!-- WEIGHT HERO -->
+  <div class="card">
+    <h2>Weekly Average Weight</h2>
+    <div class="hero-row">
+      <div class="hero-metric">
+        <span class="num" id="weekAvgWeight">—</span><span class="unit">lb</span>
+        <div class="sub" id="weightDelta">Log your first weigh-in below</div>
+      </div>
+      <div id="weightTrendPill"></div>
+    </div>
+    <canvas id="weightChart"></canvas>
+    <div class="grid2" style="margin-top:12px;">
+      <div class="metric-box">
+        <div class="num" id="startWeight">—</div>
+        <div class="lbl">Starting weight</div>
+      </div>
+      <div class="metric-box">
+        <div class="num" id="totalLost">—</div>
+        <div class="lbl">Total change</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WAIST HERO -->
+  <div class="card">
+    <h2>Waist Measurement</h2>
+    <div class="hero-row">
+      <div class="hero-metric">
+        <span class="num" id="latestWaist">—</span><span class="unit">in</span>
+        <div class="sub" id="waistDelta">Log once a week, same spot &amp; time</div>
+      </div>
+      <div id="waistTrendPill"></div>
+    </div>
+    <canvas id="waistChart"></canvas>
+  </div>
+
+  <!-- ENTRY -->
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" id="tabWeight" onclick="switchTab('weight')">Log Weight</div>
+      <div class="tab" id="tabWaist" onclick="switchTab('waist')">Log Waist</div>
+    </div>
+
+    <div id="weightForm">
+      <div class="entry-row">
+        <div class="field">
+          <label class="f-label">Date</label>
+          <input type="date" id="weightDate">
+        </div>
+        <div class="field">
+          <label class="f-label">Weight (lb)</label>
+          <input type="number" id="weightInput" step="0.1" placeholder="e.g. 306.4" inputmode="decimal">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="logWeight()">Save weight</button>
+    </div>
+
+    <div id="waistForm" style="display:none;">
+      <div class="entry-row">
+        <div class="field">
+          <label class="f-label">Date</label>
+          <input type="date" id="waistDate">
+        </div>
+        <div class="field">
+          <label class="f-label">Waist (in)</label>
+          <input type="number" id="waistInput" step="0.1" placeholder="e.g. 44.5" inputmode="decimal">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="logWaist()">Save waist</button>
+    </div>
+  </div>
+
+  <!-- RULES -->
+  <div class="card">
+    <h2>Decision Rule</h2>
+    <div class="rule-note">
+      Weekly average weight should trend down about 0.7–1% per week (~2.2–3.1 lb at your size). Waist should trend down over roughly two weeks. If it's moving — keep going. If it stalls, adjust one lever, not everything.
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <h2>Recent Entries</h2>
+    <div class="log-list" id="logList"><div class="empty">No entries yet</div></div>
+  </div>
+
+  <div class="footer-actions">
+    <button class="btn-secondary" onclick="exportData()">Export CSV</button>
+    <button class="btn-secondary" onclick="document.getElementById('importFile').click()">Import CSV</button>
+    <input type="file" id="importFile" accept=".csv" style="display:none" onchange="importData(event)">
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const WKEY = 'kpi_weights_v1';
+const AKEY = 'kpi_waist_v1';
+const START_KEY = 'kpi_start_date_v1';
+
+function load(key){ try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e){ return []; } }
+function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+function ensureStartDate(){
+  let s = localStorage.getItem(START_KEY);
+  if(!s){ s = todayStr(); localStorage.setItem(START_KEY, s); }
+  return s;
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 1600);
+}
+
+function switchTab(which){
+  const wForm = document.getElementById('weightForm');
+  const aForm = document.getElementById('waistForm');
+  const wTab = document.getElementById('tabWeight');
+  const aTab = document.getElementById('tabWaist');
+  if(which === 'weight'){
+    wForm.style.display = ''; aForm.style.display = 'none';
+    wTab.classList.add('active'); aTab.classList.remove('active');
+  } else {
+    wForm.style.display = 'none'; aForm.style.display = '';
+    aTab.classList.add('active'); wTab.classList.remove('active');
+  }
+}
+
+function logWeight(){
+  const date = document.getElementById('weightDate').value || todayStr();
+  const val = parseFloat(document.getElementById('weightInput').value);
+  if(!val || val <= 0){ showToast('Enter a valid weight'); return; }
+  let entries = load(WKEY).filter(e => e.date !== date);
+  entries.push({ date, value: val });
+  entries.sort((a,b)=> a.date.localeCompare(b.date));
+  save(WKEY, entries);
+  document.getElementById('weightInput').value = '';
+  showToast('Weight saved');
+  render();
+}
+
+function logWaist(){
+  const date = document.getElementById('waistDate').value || todayStr();
+  const val = parseFloat(document.getElementById('waistInput').value);
+  if(!val || val <= 0){ showToast('Enter a valid measurement'); return; }
+  let entries = load(AKEY).filter(e => e.date !== date);
+  entries.push({ date, value: val });
+  entries.sort((a,b)=> a.date.localeCompare(b.date));
+  save(AKEY, entries);
+  document.getElementById('waistInput').value = '';
+  showToast('Waist saved');
+  render();
+}
+
+function deleteEntry(type, date){
+  const key = type === 'w' ? WKEY : AKEY;
+  let entries = load(key).filter(e => e.date !== date);
+  save(key, entries);
+  render();
+}
+
+function rollingAverage(entries, days){
+  if(entries.length === 0) return null;
+  const lastDate = new Date(entries[entries.length-1].date);
+  const cutoff = new Date(lastDate); cutoff.setDate(cutoff.getDate() - (days-1));
+  const windowed = entries.filter(e => new Date(e.date) >= cutoff);
+  const sum = windowed.reduce((a,e)=>a+e.value,0);
+  return sum / windowed.length;
+}
+
+function drawSparkline(canvasId, entries, color, cssHeight){
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const cssWidth = canvas.clientWidth || canvas.parentElement.clientWidth;
+  canvas.style.height = cssHeight + 'px';
+  canvas.width = cssWidth * dpr;
+  canvas.height = cssHeight * dpr;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,cssWidth,cssHeight);
+
+  if(entries.length < 2){
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.fillText('Log at least 2 entries to see a trend line', 4, cssHeight/2);
+    return;
+  }
+
+  const vals = entries.map(e=>e.value);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const pad = 8;
+  const range = (max - min) || 1;
+
+  ctx.beginPath();
+  entries.forEach((e,i)=>{
+    const x = pad + (i/(entries.length-1)) * (cssWidth - pad*2);
+    const y = cssHeight - pad - ((e.value - min)/range) * (cssHeight - pad*2);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.4;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // last point dot
+  const lastX = pad + ((entries.length-1)/(entries.length-1)) * (cssWidth - pad*2);
+  const lastY = cssHeight - pad - ((entries[entries.length-1].value - min)/range) * (cssHeight - pad*2);
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3.5, 0, Math.PI*2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function renderTrendPill(elId, status, text){
+  const el = document.getElementById(elId);
+  const cls = status === 'good' ? 'trend-good' : status === 'watch' ? 'trend-watch' : 'trend-flat';
+  const arrow = status === 'good' ? '↓' : status === 'watch' ? '→' : '·';
+  el.innerHTML = `<span class="trend-pill ${cls}">${arrow} ${text}</span>`;
+}
+
+function render(){
+  const startDate = new Date(ensureStartDate());
+  const now = new Date();
+  const dayNum = Math.max(1, Math.floor((now - startDate) / 86400000) + 1);
+  document.getElementById('dayCount').textContent = Math.min(dayNum, 90);
+
+  const weights = load(WKEY);
+  const waists = load(AKEY);
+
+  // Weight hero
+  if(weights.length === 0){
+    document.getElementById('weekAvgWeight').textContent = '—';
+    document.getElementById('weightDelta').textContent = 'Log your first weigh-in below';
+    document.getElementById('startWeight').textContent = '—';
+    document.getElementById('totalLost').textContent = '—';
+    renderTrendPill('weightTrendPill', 'flat', 'No data');
+  } else {
+    const thisWeekAvg = rollingAverage(weights, 7);
+    const prevEntries = weights.filter(e => {
+      const d = new Date(e.date);
+      const lastDate = new Date(weights[weights.length-1].date);
+      const cutoffStart = new Date(lastDate); cutoffStart.setDate(cutoffStart.getDate()-13);
+      const cutoffEnd = new Date(lastDate); cutoffEnd.setDate(cutoffEnd.getDate()-7);
+      return d >= cutoffStart && d < cutoffEnd;
+    });
+    const prevWeekAvg = prevEntries.length ? prevEntries.reduce((a,e)=>a+e.value,0)/prevEntries.length : null;
+
+    document.getElementById('weekAvgWeight').textContent = thisWeekAvg.toFixed(1);
+    const start = weights[0].value;
+    document.getElementById('startWeight').textContent = start.toFixed(1);
+    const totalChange = thisWeekAvg - start;
+    document.getElementById('totalLost').textContent = (totalChange <= 0 ? '' : '+') + totalChange.toFixed(1) + ' lb';
+
+    if(prevWeekAvg){
+      const pctChange = ((thisWeekAvg - prevWeekAvg) / prevWeekAvg) * 100;
+      const lbChange = thisWeekAvg - prevWeekAvg;
+      document.getElementById('weightDelta').textContent =
+        `${lbChange <= 0 ? '' : '+'}${lbChange.toFixed(1)} lb vs last week (${pctChange.toFixed(2)}%)`;
+      if(pctChange <= -0.7) renderTrendPill('weightTrendPill', 'good', 'On track');
+      else if(pctChange <= -0.2) renderTrendPill('weightTrendPill', 'watch', 'Slowing');
+      else renderTrendPill('weightTrendPill', 'watch', 'Stalled');
+    } else {
+      document.getElementById('weightDelta').textContent = 'Need 2 weeks of data for a trend';
+      renderTrendPill('weightTrendPill', 'flat', 'Building baseline');
+    }
+  }
+  drawSparkline('weightChart', weights, '#a9c4b3', 90);
+
+  // Waist hero
+  if(waists.length === 0){
+    document.getElementById('latestWaist').textContent = '—';
+    document.getElementById('waistDelta').textContent = 'Log once a week, same spot & time';
+    renderTrendPill('waistTrendPill', 'flat', 'No data');
+  } else {
+    const latest = waists[waists.length-1];
+    document.getElementById('latestWaist').textContent = latest.value.toFixed(1);
+    const twoWeeksAgo = new Date(latest.date); twoWeeksAgo.setDate(twoWeeksAgo.getDate()-14);
+    const priorCandidates = waists.filter(e => new Date(e.date) <= twoWeeksAgo);
+    if(priorCandidates.length){
+      const prior = priorCandidates[priorCandidates.length-1];
+      const diff = latest.value - prior.value;
+      document.getElementById('waistDelta').textContent = `${diff <= 0 ? '' : '+'}${diff.toFixed(1)} in vs ~2 weeks ago`;
+      if(diff <= -0.1) renderTrendPill('waistTrendPill', 'good', 'Trending down');
+      else if(diff < 0.1) renderTrendPill('waistTrendPill', 'watch', 'Flat');
+      else renderTrendPill('waistTrendPill', 'watch', 'Up');
+    } else {
+      document.getElementById('waistDelta').textContent = 'Need 2 weeks of data for a trend';
+      renderTrendPill('waistTrendPill', 'flat', 'Building baseline');
+    }
+  }
+  drawSparkline('waistChart', waists, '#e0937a', 70);
+
+  // Log list
+  const combined = [
+    ...weights.map(e=>({...e, type:'w', label:'Weight', unit:'lb'})),
+    ...waists.map(e=>({...e, type:'a', label:'Waist', unit:'in'}))
+  ].sort((a,b)=> b.date.localeCompare(a.date)).slice(0, 20);
+
+  const listEl = document.getElementById('logList');
+  if(combined.length === 0){
+    listEl.innerHTML = '<div class="empty">No entries yet</div>';
+  } else {
+    listEl.innerHTML = combined.map(e => `
+      <div class="log-row">
+        <div>
+          <div>${e.label}: <strong>${e.value.toFixed(1)} ${e.unit}</strong></div>
+          <div class="d">${e.date}</div>
+        </div>
+        <div class="delete" onclick="deleteEntry('${e.type}','${e.date}')">Delete</div>
+      </div>
+    `).join('');
+  }
+}
+
+function exportData(){
+  const weights = load(WKEY).map(e=>({...e, type:'weight'}));
+  const waists = load(AKEY).map(e=>({...e, type:'waist'}));
+  const all = [...weights, ...waists].sort((a,b)=>a.date.localeCompare(b.date));
+  let csv = 'date,type,value\n';
+  all.forEach(e => { csv += `${e.date},${e.type},${e.value}\n`; });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kpi-tracker-backup-${todayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exported');
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const lines = e.target.result.split('\n').slice(1).filter(l=>l.trim());
+    let weights = load(WKEY), waists = load(AKEY);
+    lines.forEach(line => {
+      const [rawDate, rawType, rawValue] = line.split(',');
+      if(!rawDate || !rawType || !rawValue) return;
+      const date = rawDate.trim();
+      const type = rawType.trim();
+      const val = parseFloat(rawValue);
+      if(!date || isNaN(val)) return;
+      if(type === 'weight'){
+        weights = weights.filter(w=>w.date !== date);
+        weights.push({date, value: val});
+      } else if(type === 'waist'){
+        waists = waists.filter(w=>w.date !== date);
+        waists.push({date, value: val});
+      }
+    });
+    weights.sort((a,b)=>a.date.localeCompare(b.date));
+    waists.sort((a,b)=>a.date.localeCompare(b.date));
+    save(WKEY, weights);
+    save(AKEY, waists);
+    showToast('Imported');
+    render();
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// init
+document.getElementById('weightDate').value = todayStr();
+document.getElementById('waistDate').value = todayStr();
+ensureStartDate();
+render();
+
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(render, 150);
+});
+</script>
+</body>
+</html>
